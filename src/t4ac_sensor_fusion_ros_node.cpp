@@ -75,6 +75,7 @@ float ratio;
 
 ros::Publisher pub_merged_obstacles_marker_array;
 ros::Publisher pub_merged_obstacles;
+
 ros::Publisher pub_monitorized_area;
 
 // Subcribers
@@ -95,7 +96,7 @@ bool inside_monitorized_area(Point , float []);
 void road_curvature_cb(const std_msgs::Float64::ConstPtr& );
 void odom_cb(const nav_msgs::Odometry::ConstPtr& );
 void sensor_fusion_cb(const t4ac_msgs::BEV_detections_list::ConstPtr& , 
-							const t4ac_msgs::BEV_detections_list::ConstPtr& );
+					  const t4ac_msgs::BEV_detections_list::ConstPtr& );
 
 // End Declarations of functions //
 
@@ -106,29 +107,46 @@ int main (int argc, char ** argv)
 {
 	// Initialize ROS
 
-	ros::init(argc, argv, "sensor_fusion_node");
+	ros::init(argc, argv, "t4ac_sensor_fusion_ros_node");
 	ros::NodeHandle nh;
 
 	// Get max. road curvature by param
 
-	nh.param<float>("/controller/rc_max", max_road_curvature, 30);
+	nh.getParam("/t4ac/perception/detection/sensor_fusion/t4ac_sensor_fusion_ros/t4ac_sensor_fusion_ros_node/max_road_curvature", max_road_curvature);
 
     // Publishers
 
-    pub_merged_obstacles_marker_array = nh.advertise<visualization_msgs::MarkerArray>("/t4ac/perception/detection/merged_obstacles_marker", 100, true);
-	pub_merged_obstacles = nh.advertise<t4ac_msgs::BEV_detections_list>("/t4ac/perception/detection/merged_obstacles", 100, true);
-	pub_monitorized_area = nh.advertise<visualization_msgs::Marker>("/t4ac/perception/detection/monitorized_area_marker", 100, true);
+	std::string BEV_merged_obstacles_marker_topic, BEV_merged_obstacles_topic, rectangular_monitorized_area_marker_topic;
+
+	nh.getParam("/t4ac/perception/detection/sensor_fusion/t4ac_sensor_fusion_ros/t4ac_sensor_fusion_ros_node/pub_BEV_merged_obstacles_marker", BEV_merged_obstacles_marker_topic);
+	pub_merged_obstacles_marker_array = nh.advertise<visualization_msgs::MarkerArray>(BEV_merged_obstacles_marker_topic, 20, true);
+
+	nh.getParam("/t4ac/perception/detection/sensor_fusion/t4ac_sensor_fusion_ros/t4ac_sensor_fusion_ros_node/pub_BEV_merged_obstacles", BEV_merged_obstacles_topic);
+	pub_merged_obstacles = nh.advertise<t4ac_msgs::BEV_detections_list>(BEV_merged_obstacles_topic, 20, true);
+
+	nh.getParam("/t4ac/perception/detection/sensor_fusion/t4ac_sensor_fusion_ros/t4ac_sensor_fusion_ros_node/pub_rectangular_monitorized_area_marker", rectangular_monitorized_area_marker_topic);
+	pub_monitorized_area = nh.advertise<visualization_msgs::Marker>(rectangular_monitorized_area_marker_topic, 20, true);
 
 	// Subscribers
 
-	sub_road_curvature = nh.subscribe("/control/rc", 10, road_curvature_cb);
-	sub_odom = nh.subscribe("/localization/pose", 10, odom_cb);
+	std::string road_curvature_topic, localization_pose_topic;
+
+	// nh.getParam("/t4ac/perception/detection/sensor_fusion/t4ac_sensor_fusion_ros/t4ac_sensor_fusion_ros_node/sub_road_curvature", road_curvature_topic);
+	// sub_road_curvature = nh.subscribe(road_curvature_topic, 15, road_curvature_cb);
+
+	// nh.getParam("/t4ac/perception/detection/sensor_fusion/t4ac_sensor_fusion_ros/t4ac_sensor_fusion_ros_node/sub_localization_pose", localization_pose_topic);
+	// sub_odom = nh.subscribe(localization_pose_topic, 15, odom_cb);
 
 	message_filters::Subscriber<t4ac_msgs::BEV_detections_list> sub_bev_image_detections;
 	message_filters::Subscriber<t4ac_msgs::BEV_detections_list> sub_bev_lidar_detections;
 
-	sub_bev_image_detections.subscribe(nh, "/t4ac/perception/detection/bev_image_obstacles", 10);
-	sub_bev_lidar_detections.subscribe(nh, "/t4ac/perception/detection/bev_lidar_obstacles", 10);
+	std::string BEV_image_obstacles_topic, BEV_lidar_obstacles_topic;
+
+	nh.getParam("/t4ac/perception/detection/sensor_fusion/t4ac_sensor_fusion_ros/t4ac_sensor_fusion_ros_node/sub_BEV_image_obstacles", BEV_image_obstacles_topic);
+	sub_bev_image_detections.subscribe(nh, BEV_image_obstacles_topic, 10);
+
+	nh.getParam("/t4ac/perception/detection/sensor_fusion/t4ac_sensor_fusion_ros/t4ac_sensor_fusion_ros_node/sub_BEV_lidar_obstacles", BEV_lidar_obstacles_topic);
+	sub_bev_lidar_detections.subscribe(nh, BEV_lidar_obstacles_topic, 10);
 
 	// Callback 1: Synchronize LiDAR point cloud based BEV detections and Depth map & 2D Object detectio based BEV detections
 
@@ -184,6 +202,7 @@ void sensor_fusion_cb(const t4ac_msgs::BEV_detections_list::ConstPtr& bev_image_
 
 	t4ac_msgs::BEV_detections_list merged_obstacles;
 	merged_obstacles.header = bev_lidar_detections_msg->header;
+	// std::cout << "\n\nStamp: " << merged_obstacles.header.stamp.toNSec() << std::endl;
 	merged_obstacles.front = bev_lidar_detections_msg->front;
 	merged_obstacles.back = bev_lidar_detections_msg->back;
 	merged_obstacles.left = bev_lidar_detections_msg->left;
@@ -248,7 +267,7 @@ void sensor_fusion_cb(const t4ac_msgs::BEV_detections_list::ConstPtr& bev_image_
 
 		Point bev_image_detection(x_image, y_image);
 
-		/*if (bev_lidar_detections_msg->bev_detections_list.size() > 0)
+		if (bev_lidar_detections_msg->bev_detections_list.size() > 0)
 		{
 			float x_closest_lidar, y_closest_lidar;
 			x_closest_lidar = y_closest_lidar = 0;
@@ -342,9 +361,20 @@ void sensor_fusion_cb(const t4ac_msgs::BEV_detections_list::ConstPtr& bev_image_
 				merged_obstacles_marker_array.markers.push_back(merged_obstacle_marker);
 				merged_obstacles.bev_detections_list.push_back(merged_obstacle);
 			}
-		}*/
+		}
 
-		if (inside_monitorized_area(bev_image_detection,monitorized_area))
+		
+	}
+
+	// Publish merged obstacles
+
+	pub_merged_obstacles_marker_array.publish(merged_obstacles_marker_array);
+	pub_merged_obstacles.publish(merged_obstacles);
+}
+
+// End Definitions of functions //
+
+/*if (inside_monitorized_area(bev_image_detection,monitorized_area))
 		{
 			// Visual marker of merged obstacle
 
@@ -385,13 +415,4 @@ void sensor_fusion_cb(const t4ac_msgs::BEV_detections_list::ConstPtr& bev_image_
 
 			merged_obstacles_marker_array.markers.push_back(merged_obstacle_marker);
 			merged_obstacles.bev_detections_list.push_back(merged_obstacle);
-		}
-	}
-
-	// Publish merged obstacles
-
-	pub_merged_obstacles_marker_array.publish(merged_obstacles_marker_array);
-	pub_merged_obstacles.publish(merged_obstacles);
-}
-
-// End Definitions of functions //
+		}*/

@@ -1,0 +1,37 @@
+<launch>
+    <arg name="t4ac_sensors_synchro_ros_node" value="/t4ac/perception/detection/sensor_fusion/t4ac_sensor_fusion_ros/t4ac_sensors_synchro_ros_node"/>
+    <group ns="$(arg t4ac_sensors_synchro_ros_node)">
+        <param name="pub_synchronized_pointcloud" type="string" value="$(arg t4ac_sensors_synchro_ros_node)/synchronized_pointcloud"/> 
+        <param name="pub_synchronized_image" type="string" value="$(arg t4ac_sensors_synchro_ros_node)/synchronized_image"/>
+        <param name="sub_input_pointcloud" type="string" value="/velodyne_points"/>
+        <param name="sub_input_image" type="string" value="/zed_node/left/image_rect_color"/>
+    </group>
+    <node pkg="t4ac_sensor_fusion_ros" type="t4ac_sensors_synchro_ros_node.py" name="t4ac_sensors_synchro_ros_node" output="screen"/>
+
+    <arg name="t4ac_BEV_from_2D_detector_ros_node" value="/t4ac/perception/detection/sensor_fusion/t4ac_sensor_fusion_ros/t4ac_BEV_from_2D_detector_ros_node"/>
+    <arg name="t4ac_yolov5_ros_node" value="/t4ac/perception/detection/t4ac_yolov5_ros/t4ac_yolov5_ros_node"/>
+    <group ns="$(arg t4ac_BEV_from_2D_detector_ros_node)">
+        <param name="horizontal_fov" type="double" value="85"/> <!-- º degrees -->
+
+        <param name="pub_BEV_image_obstacles" type="string" value="$(arg t4ac_BEV_from_2D_detector_ros_node)/BEV_image_obstacles"/>
+        <param name="pub_BEV_road_signals_obstacles" type="string" value="$(arg t4ac_BEV_from_2D_detector_ros_node)/BEV_road_signals_obstacles"/>
+        <param name="pub_BEV_image_detections_markers" type="string" value="$(arg t4ac_BEV_from_2D_detector_ros_node)/BEV_image_detections_markers"/>
+        <param name="sub_image_detections" type="string" value="$(arg t4ac_yolov5_ros_node)/image_detections"/>
+        <param name="sub_image_depth_map" type="string" value="/zed_node/depth/depth_registered"/>
+    </group>
+    <node pkg="t4ac_sensor_fusion_ros" type="t4ac_BEV_from_2D_detector_ros_node" name="t4ac_BEV_from_2D_detector_ros_node" output="screen"/>
+
+    <arg name="t4ac_sensor_fusion_ros_node" value="/t4ac/perception/detection/sensor_fusion/t4ac_sensor_fusion_ros/t4ac_sensor_fusion_ros_node"/>
+    <group ns="$(arg t4ac_sensor_fusion_ros_node)">
+        <param name="max_road_curvature" type="double" value="30"/> 
+
+        <param name="pub_BEV_merged_obstacles_marker" type="string" value="$(arg t4ac_sensor_fusion_ros_node)/BEV_merged_obstacles_marker"/> 
+        <param name="pub_BEV_merged_obstacles" type="string" value="$(arg t4ac_sensor_fusion_ros_node)/BEV_merged_obstacles"/>
+        <param name="pub_rectangular_monitorized_area_marker" type="string" value="$(arg t4ac_sensor_fusion_ros_node)/rectangular_monitorized_area_marker"/>
+        <!-- <param name="sub_road_curvature" type="string" value="TODO"/> -->
+        <param name="sub_localization_pose" type="string" value="/t4ac/localization/pose"/>
+        <param name="sub_BEV_image_obstacles" type="string" value="$(arg t4ac_BEV_from_2D_detector_ros_node)/BEV_image_obstacles"/>
+        <param name="sub_BEV_lidar_obstacles" type="string" value="/t4ac/perception/detection/t4ac_openpcdet_ros/t4ac_openpcdet_ros_node/BEV_lidar_obstacles"/>
+    </group>
+    <node pkg="t4ac_sensor_fusion_ros" type="t4ac_sensor_fusion_ros_node" name="t4ac_sensor_fusion_ros_node" output="screen"/>
+</launch>

@@ -126,7 +126,7 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
   ${OpenCV_LIB_COMPONENTS}
   ${OpenCV_LIBRARIES}
-  include/sensor_fusion
+  include/t4ac_sensor_fusion_ros
 )
 
 ## Declare a C++ library
@@ -143,14 +143,14 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 
-add_executable(sensor_fusion_node
-  src/sensor_fusion.cpp
-  include/sensor_fusion/Hungarian.hpp
-  include/sensor_fusion/Point.hpp
+add_executable(t4ac_sensor_fusion_ros_node
+  src/t4ac_sensor_fusion_ros_node.cpp
+  include/t4ac_sensor_fusion_ros/Hungarian.hpp
+  include/t4ac_sensor_fusion_ros/Point.hpp
   src/Hungarian.cpp)
 
-add_executable(bev_from_2d_object_detector_node 
-  src/bev_from_2d_object_detector.cpp)
+add_executable(t4ac_BEV_from_2D_detector_ros_node 
+  src/t4ac_BEV_from_2D_detector_ros_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -161,19 +161,19 @@ add_executable(bev_from_2d_object_detector_node
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 
-add_dependencies(sensor_fusion_node 
+add_dependencies(t4ac_sensor_fusion_ros_node 
   ${${PROJECT_NAME}_EXPORTED_TARGETS} 
   ${catkin_EXPORTED_TARGETS})
 
-add_dependencies(bev_from_2d_object_detector_node 
+add_dependencies(t4ac_BEV_from_2D_detector_ros_node 
   ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 
-target_link_libraries(sensor_fusion_node
+target_link_libraries(t4ac_sensor_fusion_ros_node
   ${catkin_LIBRARIES})
 
-target_link_libraries(bev_from_2d_object_detector_node  
+target_link_libraries(t4ac_BEV_from_2D_detector_ros_node  
   ${catkin_LIBRARIES} 
   ${OpenCV_LIBS})  
 
