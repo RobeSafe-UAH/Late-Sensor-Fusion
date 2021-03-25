@@ -34,8 +34,8 @@ def sensors_synchro_callback(image_msg,pointcloud_msg):
     """
     """
 
-    # print("Image stamp: ", image_msg.header.stamp.to_sec())
-    # print("PointCloud stamp: ", pointcloud_msg.header.stamp.to_sec())
+    print("Image stamp: ", image_msg.header.stamp.to_sec())
+    print("PointCloud stamp: ", pointcloud_msg.header.stamp.to_sec())
 
     image_msg.header.stamp = pointcloud_msg.header.stamp
     pub_synchronized_image.publish(image_msg)
@@ -64,8 +64,8 @@ if __name__ == '__main__':
     slop = 0.1
 
     ts = ApproximateTimeSynchronizer([sub_input_image,  
-                           sub_input_pointcloud],
-                           header_synchro,slop)
+                                      sub_input_pointcloud],
+                                      header_synchro,slop)
 
     ts.registerCallback(sensors_synchro_callback)
 

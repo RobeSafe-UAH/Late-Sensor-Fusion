@@ -147,7 +147,7 @@ class Node
         void bev_from_2d_object_detector_callback(const sensor_msgs::Image::ConstPtr& depth_msg, 
                                                   const t4ac_msgs::Bounding_Box_2D_list::ConstPtr& image_detections_msg)
         {
-            // std::cout << "Publish: " << depth_msg->header.stamp << std::endl;
+            std::cout << "Publish: " << depth_msg->header.stamp << std::endl;
             t4ac_msgs::BEV_detections_list bev_image_obstacles, bev_image_road_obstacles;
             visualization_msgs::MarkerArray bev_image_detections_marker_array;
 
