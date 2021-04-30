@@ -34,8 +34,8 @@ def sensors_synchro_callback(image_msg,pointcloud_msg):
     """
     """
 
-    print("Image stamp: ", image_msg.header.stamp.to_sec())
-    print("PointCloud stamp: ", pointcloud_msg.header.stamp.to_sec())
+    # print("Image stamp: ", image_msg.header.stamp.to_sec())
+    # print("PointCloud stamp: ", pointcloud_msg.header.stamp.to_sec())
 
     image_msg.header.stamp = pointcloud_msg.header.stamp
     pub_synchronized_image.publish(image_msg)

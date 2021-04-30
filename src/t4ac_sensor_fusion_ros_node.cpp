@@ -119,7 +119,7 @@ int main (int argc, char ** argv)
 	std::string BEV_merged_obstacles_marker_topic, BEV_merged_obstacles_topic, rectangular_monitorized_area_marker_topic;
 
 	nh.getParam("/t4ac/perception/detection/sensor_fusion/t4ac_sensor_fusion_ros/t4ac_sensor_fusion_ros_node/pub_BEV_merged_obstacles_marker", BEV_merged_obstacles_marker_topic);
-	pub_merged_obstacles_marker_array = nh.advertise<visualization_msgs::MarkerArray>(BEV_merged_obstacles_marker_topic, 20, true);
+	pub_merged_obstacles_marker_array = nh.advertise<visualization_msgs::MarkerArray>(BEV_merged_obstacles_marker_topic, 1, true);
 
 	nh.getParam("/t4ac/perception/detection/sensor_fusion/t4ac_sensor_fusion_ros/t4ac_sensor_fusion_ros_node/pub_BEV_merged_obstacles", BEV_merged_obstacles_topic);
 	pub_merged_obstacles = nh.advertise<t4ac_msgs::BEV_detections_list>(BEV_merged_obstacles_topic, 20, true);
@@ -213,6 +213,7 @@ void sensor_fusion_cb(const t4ac_msgs::BEV_detections_list::ConstPtr& bev_image_
 	// Define monitorized area
 
 	float xmax, xmin, ymax, ymin, a;
+	int id_marker = 0;
 	
 	float predicted_distance = ego_vel * 2; // The distance 4 seconds ahead
 
@@ -231,7 +232,7 @@ void sensor_fusion_cb(const t4ac_msgs::BEV_detections_list::ConstPtr& bev_image_
 
 	monitorized_area_marker.header.frame_id = bev_lidar_detections_msg->header.frame_id;
 	monitorized_area_marker.type = visualization_msgs::Marker::CUBE;
-	monitorized_area_marker.lifetime = ros::Duration(0.40);
+	// monitorized_area_marker.lifetime = ros::Duration(0.40);
 	monitorized_area_marker.pose.position.x = xmax/2;
 	monitorized_area_marker.pose.position.y = (ymin+ymax)/2;
 	monitorized_area_marker.pose.position.z = -2;
@@ -262,8 +263,6 @@ void sensor_fusion_cb(const t4ac_msgs::BEV_detections_list::ConstPtr& bev_image_
 
 		string type = bev_image_detections_msg->bev_detections_list[i].type;
 		float score = bev_image_detections_msg->bev_detections_list[i].score;
-
-		//std::cout << "Object type: " << type << std::endl;
 
 		Point bev_image_detection(x_image, y_image);
 
@@ -309,10 +308,11 @@ void sensor_fusion_cb(const t4ac_msgs::BEV_detections_list::ConstPtr& bev_image_
 
 				merged_obstacle_marker.header.frame_id = bev_lidar_detections_msg->header.frame_id;
 				merged_obstacle_marker.ns = "merged_obstacles";
-				merged_obstacle_marker.id = index_most_similar;
+				merged_obstacle_marker.id = id_marker;
+				id_marker++;
 				merged_obstacle_marker.action = visualization_msgs::Marker::ADD;
 				merged_obstacle_marker.type = visualization_msgs::Marker::CUBE;
-				merged_obstacle_marker.lifetime = ros::Duration(0.40);
+				merged_obstacle_marker.lifetime = ros::Duration(0.2); 
 
 				if (x_closest_lidar != 0 && y_closest_lidar != 0)
 				{
@@ -368,6 +368,30 @@ void sensor_fusion_cb(const t4ac_msgs::BEV_detections_list::ConstPtr& bev_image_
 
 	// Publish merged obstacles
 
+	if (merged_obstacles_marker_array.markers.size() == 0)
+	{
+		visualization_msgs::Marker merged_obstacle_marker;
+
+		merged_obstacle_marker.header.frame_id = bev_lidar_detections_msg->header.frame_id;
+		merged_obstacle_marker.ns = "merged_obstacles";
+		merged_obstacle_marker.id = id_marker;
+		merged_obstacle_marker.action = visualization_msgs::Marker::ADD;
+		merged_obstacle_marker.type = visualization_msgs::Marker::CUBE;
+		merged_obstacle_marker.lifetime = ros::Duration(0.2); //ros::Duration(0.01);
+		merged_obstacle_marker.pose.position.x = 0;
+		merged_obstacle_marker.pose.position.y = 0;
+		merged_obstacle_marker.scale.x = 1;
+		merged_obstacle_marker.scale.y = 1;
+		merged_obstacle_marker.scale.z = 1;
+		merged_obstacle_marker.color.r = 0;
+		merged_obstacle_marker.color.g = 255;
+		merged_obstacle_marker.color.b = 0;
+		merged_obstacle_marker.color.a = 0.8;
+
+		merged_obstacles_marker_array.markers.push_back(merged_obstacle_marker);
+	}
+
+	// std::cout << "Merged obstacles: " << merged_obstacles_marker_array.markers.size() << std::endl;
 	pub_merged_obstacles_marker_array.publish(merged_obstacles_marker_array);
 	pub_merged_obstacles.publish(merged_obstacles);
 }

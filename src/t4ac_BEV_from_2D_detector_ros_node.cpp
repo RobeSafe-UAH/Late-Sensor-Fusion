@@ -97,7 +97,7 @@ class Node
             pub_detected_road_signals = nh.advertise<t4ac_msgs::BEV_detections_list>(BEV_image_road_signals_topic, queue_size, true);
 
             nh.getParam("/t4ac/perception/detection/sensor_fusion/t4ac_sensor_fusion_ros/t4ac_BEV_from_2D_detector_ros_node/pub_BEV_image_detections_markers", BEV_image_detections_marker);
-            pub_detected_bev_image_detections_marker_array = nh.advertise<visualization_msgs::MarkerArray>(BEV_image_detections_marker, queue_size, true);
+            pub_detected_bev_image_detections_marker_array = nh.advertise<visualization_msgs::MarkerArray>(BEV_image_detections_marker, 5, true);
 
             // ROS subscribers
 
@@ -122,16 +122,21 @@ class Node
             bounding_box = bounding_box.reshape(0,1); // Spread input bounding box to a single row
             std::vector<double> bounding_box_vector;
             bounding_box.copyTo(bounding_box_vector);
+            bounding_box_vector.erase(std::remove_if(std::begin(bounding_box_vector),
+                                                     std::end(bounding_box_vector),
+                                                    [](const auto& value) { return (std::isnan(value) || std::isinf(value)); }),
+                                      std::end(bounding_box_vector));
             std::nth_element(bounding_box_vector.begin(), bounding_box_vector.begin() + bounding_box_vector.size()/2, bounding_box_vector.end());
+            double value = bounding_box_vector[bounding_box_vector.size()/2];
 
-            return bounding_box_vector[bounding_box_vector.size()/2];
+            return value;
         }
 
         void depth_bbox(cv::Mat depth_bb, double f, Point bounding_box_centroid, 
                         Point image_center, t4ac_msgs::BEV_detection& bev_image_detection)
         {
             double z = compute_median(depth_bb);
-
+            // std::cout << "Distance: " << z << std::endl;
             if (!isnan(z))
             {
                 bev_image_detection.x = z - 0.41; // 0.41 is the x-distance between camera and lidar (lidar frame)
@@ -147,7 +152,8 @@ class Node
         void bev_from_2d_object_detector_callback(const sensor_msgs::Image::ConstPtr& depth_msg, 
                                                   const t4ac_msgs::Bounding_Box_2D_list::ConstPtr& image_detections_msg)
         {
-            std::cout << "Publish: " << depth_msg->header.stamp << std::endl;
+            // std::cout << "Depth stamp: " << depth_msg->header.stamp << std::endl;
+            // std::cout << ">>>>>>>>>>>>" << std::endl;
             t4ac_msgs::BEV_detections_list bev_image_obstacles, bev_image_road_obstacles;
             visualization_msgs::MarkerArray bev_image_detections_marker_array;
 
@@ -157,14 +163,15 @@ class Node
 
             Point image_center(depth_msg->width/2, depth_msg->height/2);
             double f = depth_msg->width / (2 * tan(fov * M_PI / 360));    
+            int id_marker = 0;
 
             // std::cout << "Image det: " << image_detections_msg->header.stamp.toNSec() << " depth: " << depth_msg->header.stamp.toNSec() << std::endl;
             bev_image_obstacles.header.stamp = bev_image_road_obstacles.header.stamp = depth_msg->header.stamp;
 
-            // bev_image_obstacles.front = 30;
-            // bev_image_obstacles.back = -10;
-            // bev_image_obstacles.left = -15;
-            // bev_image_obstacles.right = 15;
+            bev_image_obstacles.front = 30;
+            bev_image_obstacles.back = -10;
+            bev_image_obstacles.left = -15;
+            bev_image_obstacles.right = 15;
 
             for (size_t i = 0; i < image_detections_msg->bounding_box_2D_list.size(); i++)
             {
@@ -200,10 +207,13 @@ class Node
 
                     depth_bbox(depth_bb, f, bounding_box_centroid, image_center, bev_image_detection);
 
+                    double x_aux = bev_image_detection.x;
+                    double y_aux = bev_image_detection.y;
+
                     // REMOVE
-                    // float side = 2.0;
-					// bev_image_detection.x_corners = {-side,side,-side,side};
-					// bev_image_detection.y_corners = {-side,-side,side,side};
+                    float side = 1.0;
+					bev_image_detection.x_corners = {-side,side,-side,side};
+					bev_image_detection.y_corners = {-side,-side,side,side};
                     // float aux_aux = bev_image_detection.x;
                     // bev_image_detection.x = -bev_image_detection.y;
                     // bev_image_detection.y = -aux_aux;
@@ -225,24 +235,48 @@ class Node
 
                     bev_image_detection_marker.header.frame_id = frame_id;
                     bev_image_detection_marker.ns = "bev_image_detections";
-                    bev_image_detection_marker.id = i;
+                    bev_image_detection_marker.id = id_marker;
+                    id_marker++;
                     bev_image_detection_marker.action = visualization_msgs::Marker::ADD;
                     bev_image_detection_marker.type = visualization_msgs::Marker::CUBE;
-                    bev_image_detection_marker.lifetime = ros::Duration(0.30);
-                    bev_image_detection_marker.pose.position.x = bev_image_detection.x;
-                    bev_image_detection_marker.pose.position.y = bev_image_detection.y;
+                    bev_image_detection_marker.lifetime = ros::Duration(0.2);
+                    bev_image_detection_marker.pose.position.x = x_aux;
+                    bev_image_detection_marker.pose.position.y = y_aux;
                     bev_image_detection_marker.pose.position.z = -1.5;
                     bev_image_detection_marker.scale.x = 0.5;
                     bev_image_detection_marker.scale.y = 0.5;
                     bev_image_detection_marker.scale.z = 0.5;
                     bev_image_detection_marker.color.r = 255;
                     bev_image_detection_marker.color.g = 0;
-                    bev_image_detection_marker.color.b = 255;
-                    bev_image_detection_marker.color.a = 0.8;
+                    bev_image_detection_marker.color.b = 0;
+                    bev_image_detection_marker.color.a = 1.0;
 
                     bev_image_detections_marker_array.markers.push_back(bev_image_detection_marker);
                 }    
             }
+
+            // if (bev_image_detections_marker_array.markers.size() == 0)
+            // {
+            //     visualization_msgs::Marker bev_image_detection_marker;
+
+            //     bev_image_detection_marker.header.frame_id = frame_id;
+            //     bev_image_detection_marker.ns = "bev_image_detections";
+            //     bev_image_detection_marker.id = 1;
+            //     bev_image_detection_marker.type = visualization_msgs::Marker::CUBE;
+            //     bev_image_detection_marker.lifetime = ros::Duration(0.2);
+            //     bev_image_detection_marker.pose.position.x = 0;
+            //     bev_image_detection_marker.pose.position.y = 0;
+            //     bev_image_detection_marker.pose.position.z = 0;
+            //     bev_image_detection_marker.scale.x = 0.5;
+            //     bev_image_detection_marker.scale.y = 0.5;
+            //     bev_image_detection_marker.scale.z = 0.5;
+            //     bev_image_detection_marker.color.r = 255;
+            //     bev_image_detection_marker.color.g = 0;
+            //     bev_image_detection_marker.color.b = 0;
+            //     bev_image_detection_marker.color.a = 1.0;
+
+            //     bev_image_detections_marker_array.markers.push_back(bev_image_detection_marker);
+            // }
 
             pub_detected_road_signals.publish(bev_image_road_obstacles);
             pub_detected_obstacles.publish(bev_image_obstacles);  
