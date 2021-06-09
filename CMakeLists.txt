@@ -9,12 +9,15 @@ project(t4ac_sensor_fusion_ros)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   t4ac_msgs
+  geometry_msgs
+  derived_object_msgs
   message_generation
   message_filters
   roscpp
   rospy
   cv_bridge
   std_msgs
+  tf
 )
 
 ## System dependencies are found with CMake's conventions
