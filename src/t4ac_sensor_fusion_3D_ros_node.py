@@ -21,20 +21,21 @@ Executed via
 
 import os
 import sys
+import time
 
 # ROS imports
 
-#sys.path.insert(0,'/opt/ros/melodic/lib/python2.7/dist-packages')
 import rospy
-
 from message_filters import TimeSynchronizer, ApproximateTimeSynchronizer, Subscriber
 from t4ac_msgs.msg import Bounding_Box_3D, Bounding_Box_3D_list
 from visualization_msgs.msg import Marker, MarkerArray
 
-root = rospy.get_param('/t4ac/perception/detection/sensor_fusion/t4ac_sensor_fusion_ros/t4ac_sensor_fusion_3D_ros_node/root')
+# 3D IoU
 
 # https://github.com/udacity/didi-competition/blob/master/tracklets/python/evaluate_tracklets.py
 # https://github.com/AlienCat-K/3D-IoU-Python/blob/master/3D-IoU-Python.py
+
+root = rospy.get_param('/t4ac/perception/detection/sensor_fusion/t4ac_sensor_fusion_ros/t4ac_sensor_fusion_3D_ros_node/root')
 
 class Sensor_Fusion_3D():
     """
@@ -44,6 +45,7 @@ class Sensor_Fusion_3D():
         # Aux variables
 
         self.min_overlap = 0.25 # Minimum bounding box overlap for 3D IoU
+        self.prev_time = self.curr_time = 0.0
 
         # Subscribers
 
@@ -53,15 +55,13 @@ class Sensor_Fusion_3D():
         self.sub_camera_3D_obstacles = Subscriber(camera_3D_obstacles_topic, Bounding_Box_3D_list)
         self.sub_lidar_3D_obstacles = Subscriber(lidar_3D_obstacles_topic, Bounding_Box_3D_list)
 
-        header_synchro = 60
-        slop = 0.25
+        header_synchro = 20
+        slop = 0.05
 
         self.ts = ApproximateTimeSynchronizer([self.sub_camera_3D_obstacles,
                                                self.sub_lidar_3D_obstacles],
                                                header_synchro,slop)
-        # self.ts = TimeSynchronizer([self.sub_camera_3D_obstacles,
-        #                             self.sub_lidar_3D_obstacles],
-        #                             header_synchro)
+
         self.ts.registerCallback(self.sensor_fusion_3d_callback)
 
         # Publishers
@@ -75,13 +75,14 @@ class Sensor_Fusion_3D():
     def sensor_fusion_3d_callback(self, camera_3d_obstacles_msg, lidar_3d_obstacles_msg):
         """
         """
-        print(">>>>>>>>>>>>>>>>>")
-        print("Camera stamp: ", camera_3d_obstacles_msg.header.stamp.to_sec())
-        print("LiDAR stamp: ", lidar_3d_obstacles_msg.header.stamp.to_sec())
 
-        # image_msg.header.stamp = pointcloud_msg.header.stamp
-        # pub_synchronized_image.publish(image_msg)
-        # pub_synchronized_pointcloud.publish(pointcloud_msg)
+        self.curr_time = time.time()
+
+        if self.prev_time != 0.0:
+            hz = 1 / (self.curr_time-self.prev_time)
+            print("Hz Fusion 3D: ", hz)
+
+        self.prev_time = self.curr_time
 
 def main():
     # Node name

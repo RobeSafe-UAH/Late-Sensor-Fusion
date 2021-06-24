@@ -21,6 +21,7 @@ Executed via
 
 import os
 import sys
+import time
 
 # ROS imports
 
@@ -30,12 +31,22 @@ import rospy
 from sensor_msgs.msg import PointCloud2, PointField, Image, CameraInfo
 from message_filters import TimeSynchronizer, ApproximateTimeSynchronizer, Subscriber
 
+prev_time = 0.0
+curr_time = 0.0
+
 def sensors_synchro_callback(image_msg,pointcloud_msg):
     """
     """
 
-    # print("Image stamp: ", image_msg.header.stamp.to_sec())
-    # print("PointCloud stamp: ", pointcloud_msg.header.stamp.to_sec())
+    global curr_time, prev_time
+
+    curr_time = time.time()
+
+    if prev_time != 0.0:
+        hz = 1 / (curr_time-prev_time)
+        # print("Hz synchro sensors: ", hz)
+
+    prev_time = curr_time
 
     image_msg.header.stamp = pointcloud_msg.header.stamp
     pub_synchronized_image.publish(image_msg)
@@ -60,8 +71,8 @@ if __name__ == '__main__':
     sub_input_image = Subscriber(input_image_topic, Image)
     sub_input_pointcloud = Subscriber(input_pointcloud_topic, PointCloud2)
 
-    header_synchro = 100
-    slop = 0.1
+    header_synchro = 10
+    slop = 0.05
 
     ts = ApproximateTimeSynchronizer([sub_input_image,  
                                       sub_input_pointcloud],
