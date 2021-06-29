@@ -22,6 +22,7 @@ Executed via
 import os
 import sys
 import time
+import math
 
 # ROS imports
 
@@ -32,8 +33,14 @@ from visualization_msgs.msg import Marker, MarkerArray
 
 # 3D IoU
 
+from aux_functions.geometric_functions import euclidean_distance
+from aux_functions.iou_3d_functions import compute_box_3d, box3d_iou
+from aux_functions.ros_functions import bbros_to_bbtuple, marker_bb
+
 # https://github.com/udacity/didi-competition/blob/master/tracklets/python/evaluate_tracklets.py
 # https://github.com/AlienCat-K/3D-IoU-Python/blob/master/3D-IoU-Python.py
+
+# Global variables
 
 root = rospy.get_param('/t4ac/perception/detection/sensor_fusion/t4ac_sensor_fusion_ros/t4ac_sensor_fusion_3D_ros_node/root')
 
@@ -72,17 +79,53 @@ class Sensor_Fusion_3D():
         merged_3D_obstacles_marker_topic = rospy.get_param(os.path.join(root,'pub_3D_merged_obstacles_marker'))
         self.pub_3D_merged_obstacles_marker = rospy.Publisher(merged_3D_obstacles_marker_topic, MarkerArray, queue_size=20)
 
+        self.laser_frame = rospy.get_param('/t4ac/frames/laser')
+        self.camera_fov = 85
+
     def sensor_fusion_3d_callback(self, camera_3d_obstacles_msg, lidar_3d_obstacles_msg):
         """
         """
-
+        print(">>>>>>>>>>>>>>>>")
         self.curr_time = time.time()
 
         if self.prev_time != 0.0:
             hz = 1 / (self.curr_time-self.prev_time)
-            print("Hz Fusion 3D: ", hz)
+            # print("Hz Fusion 3D: ", hz)
 
         self.prev_time = self.curr_time
+        merged_obstacles_marker_array = MarkerArray()
+
+        # print("Camera obstacles: ", len(camera_3d_obstacles_msg.bounding_box_3d_list))
+        # print("LiDAR obstacles: ", len(lidar_3d_obstacles_msg.bounding_box_3d_list))
+
+        for cam_obstacle_ros in camera_3d_obstacles_msg.bounding_box_3d_list:
+            cam_obstacle_tuple = bbros_to_bbtuple(cam_obstacle_ros)
+            cam_3d_corners = compute_box_3d(cam_obstacle_tuple)
+            # print("\nCam tuple: ", cam_obstacle_tuple)
+            # print("Cam score: ", cam_obstacle_ros.score)
+            for i,lidar_obstacle_ros in enumerate(lidar_3d_obstacles_msg.bounding_box_3d_list):
+                aux_point_angle = math.atan2(lidar_obstacle_ros.pose.pose.position.x,lidar_obstacle_ros.pose.pose.position.y)
+                distance = euclidean_distance(cam_obstacle_ros,lidar_obstacle_ros)
+
+                # print("Distance: ", distance)
+                # print("LiDAR score: ", lidar_obstacle_ros.score)
+                if lidar_obstacle_ros.type != "Traffic_Cone" and lidar_obstacle_ros.type != "Barrier" and distance < 3:
+                    lidar_obstacle_tuple = bbros_to_bbtuple(lidar_obstacle_ros)
+                    lidar_3d_corners = compute_box_3d(lidar_obstacle_tuple)
+                    # print("LiD tuple: ", lidar_obstacle_tuple)
+                    iou3d, _ = box3d_iou(cam_3d_corners,lidar_3d_corners)
+                    print("iou3d: ", iou3d)
+
+                    if iou3d > 0.0:
+                        box_marker = marker_bb(lidar_3d_obstacles_msg.header,
+                                               self.laser_frame,
+                                               lidar_obstacle_tuple,
+                                               lidar_obstacle_ros.type,
+                                               i,corners=False)
+
+                        merged_obstacles_marker_array.markers.append(box_marker)
+
+        self.pub_3D_merged_obstacles_marker.publish(merged_obstacles_marker_array)
 
 def main():
     # Node name

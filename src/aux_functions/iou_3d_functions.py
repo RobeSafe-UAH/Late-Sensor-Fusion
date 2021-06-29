@@ -142,11 +142,9 @@ def roty(t):
                      [-s, 0,  c]])
 
 def compute_box_3d(obj):
-    ''' Takes an object and a projection matrix (P) and projects the 3d
-        bounding box into the image plane.
+    ''' Takes an object [(h,w,l),yaw,(x,y,z)] (Camera frame) 
         Returns:
-            corners_2d: (8,2) array in left image coord.
-            corners_3d: (8,3) array in LiDAR coord.
+            corners_3d: (8,3) array in camera coord.
     '''
     # compute rotational matrix around yaw axis
     yaw = obj[1]
