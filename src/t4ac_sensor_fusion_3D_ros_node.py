@@ -114,7 +114,7 @@ class Sensor_Fusion_3D():
                     lidar_3d_corners = compute_box_3d(lidar_obstacle_tuple)
                     # print("LiD tuple: ", lidar_obstacle_tuple)
                     iou3d, _ = box3d_iou(cam_3d_corners,lidar_3d_corners)
-                    print("iou3d: ", iou3d)
+                    # print("iou3d: ", iou3d)
 
                     if iou3d > 0.0:
                         box_marker = marker_bb(lidar_3d_obstacles_msg.header,

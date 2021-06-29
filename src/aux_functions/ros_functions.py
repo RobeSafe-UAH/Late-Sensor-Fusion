@@ -18,9 +18,6 @@ def marker_bb(header,frame_id,box,label,id_marker,corners=False):
     If corners = True, visualize the 3D corners instead of a solid cube
     """
 
-    colors_label = [(0,0,255), (255,255,0), (128,0,0), # car(blue), truck(yellow), construction_vehicle(maroon)
-                    (0,128,128), (0,128,0), (0,255,255), # bus(teal), trailer(green), barrier(cyan)
-                    (0,255,0), (128,128,128), (255,0,255), (128,0,128)] #motorcycle(lime), bicycle(grey), pedestrian(magenta), traffic_cone(purple)
     # print("box merged: ", box)
     print("id marker: ", id_marker)
     box_marker = Marker()
@@ -42,8 +39,6 @@ def marker_bb(header,frame_id,box,label,id_marker,corners=False):
     box_marker.scale.x = box[0][2]
     box_marker.scale.y = box[0][1]
     box_marker.scale.z = box[0][0]
-    # color_norm = map(lambda x: x/255, colors_label[label-1])
-    # box_marker.color.r, box_marker.color.g, box_marker.color.b = color_norm
     box_marker.color.a = 1.0
 
     return box_marker
